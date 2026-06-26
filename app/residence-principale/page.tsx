@@ -1,18 +1,20 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ReferenceLine,
-  ResponsiveContainer,
-  Legend,
-} from "recharts"
+import dynamic from "next/dynamic"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+
+const PatrimoineChart = dynamic(
+  () => import("@/components/patrimoine-chart").then((m) => m.PatrimoineChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
+        Chargement du graphique…
+      </div>
+    ),
+  }
+)
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
@@ -301,34 +303,6 @@ function MetricCard({
   )
 }
 
-// Custom tooltip for the chart
-function CustomTooltip({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean
-  payload?: Array<{ name: string; value: number; color: string }>
-  label?: number
-}) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="rounded-xl border border-border bg-popover px-3 py-2 text-xs shadow-md">
-      <p className="mb-1.5 font-medium text-foreground">Année {label}</p>
-      {payload.map((p) => (
-        <div key={p.name} className="flex items-center gap-2">
-          <span
-            className="inline-block h-2 w-2 rounded-full"
-            style={{ background: p.color }}
-          />
-          <span className="text-muted-foreground">{p.name} :</span>
-          <span className="font-mono font-medium text-foreground">{fmtK(p.value)}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 // ——————————————————————————————————————————————————
 // Defaults
 // ——————————————————————————————————————————————————
@@ -385,10 +359,6 @@ export default function Page() {
   const buyerMonthlyTotal = mensualiteTotale + chargesProprioMensuel
   const renterMonthlyTotal = inputs.loyerMensuelCC + inputs.assuranceLocataire / 12
   const surplusMensuel = renterMonthlyTotal - buyerMonthlyTotal
-
-  // Chart color scheme (monochrome)
-  const colorAcheteur = "oklch(0.205 0 0)"
-  const colorLocataire = "oklch(0.556 0 0)"
 
   // Reference snapshots
   const snap = (yr: number) => points.find((p) => p.year === yr)
@@ -462,64 +432,7 @@ export default function Page() {
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
-                <ResponsiveContainer width="100%" height={320}>
-                  <LineChart data={points} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="oklch(0.922 0 0)"
-                      vertical={false}
-                    />
-                    <XAxis
-                      dataKey="year"
-                      tickLine={false}
-                      axisLine={false}
-                      tick={{ fontSize: 11, fill: "oklch(0.556 0 0)" }}
-                      tickFormatter={(v) => `${v} ans`}
-                      interval={4}
-                    />
-                    <YAxis
-                      tickLine={false}
-                      axisLine={false}
-                      tick={{ fontSize: 11, fill: "oklch(0.556 0 0)" }}
-                      tickFormatter={fmtK}
-                      width={64}
-                    />
-                    <Tooltip content={<CustomTooltip />} />
-                    <ReferenceLine y={0} stroke="oklch(0.708 0 0)" strokeWidth={1} />
-                    {breakeven !== null && (
-                      <ReferenceLine
-                        x={breakeven}
-                        stroke="oklch(0.439 0 0)"
-                        strokeDasharray="4 3"
-                        strokeWidth={1.5}
-                        label={{
-                          value: `Équilibre an ${breakeven}`,
-                          position: "insideTopRight",
-                          fontSize: 10,
-                          fill: "oklch(0.439 0 0)",
-                        }}
-                      />
-                    )}
-                    <Line
-                      type="monotone"
-                      dataKey="acheteur"
-                      name="Acheteur"
-                      stroke={colorAcheteur}
-                      strokeWidth={2}
-                      dot={false}
-                      activeDot={{ r: 4, strokeWidth: 0 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="locataire"
-                      name="Locataire"
-                      stroke={colorLocataire}
-                      strokeWidth={2}
-                      dot={false}
-                      activeDot={{ r: 4, strokeWidth: 0 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                <PatrimoineChart points={points} breakeven={breakeven} />
               </CardContent>
             </Card>
 
