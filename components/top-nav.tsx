@@ -14,8 +14,8 @@ export function TopNav() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-sm">
-      <div className="mx-auto flex h-12 max-w-5xl items-center gap-6 px-4">
-        <span className="text-sm font-semibold text-foreground">Simulateurs</span>
+      <div className="mx-auto flex h-14 max-w-5xl items-center gap-6 px-4">
+        <span className="text-base font-semibold text-foreground">Simulateurs</span>
         <nav className="flex h-full items-center gap-1">
           {items.map((item) => {
             const active = pathname === item.href
@@ -24,7 +24,7 @@ export function TopNav() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "relative flex h-full items-center px-3 text-sm transition-colors",
+                  "relative flex h-full items-center px-4 text-base transition-colors",
                   active
                     ? "text-foreground font-medium"
                     : "text-muted-foreground hover:text-foreground"
@@ -32,7 +32,7 @@ export function TopNav() {
               >
                 {item.label}
                 {active && (
-                  <span className="absolute bottom-0 left-3 right-3 h-px bg-foreground" />
+                  <span className="absolute bottom-0 left-4 right-4 h-px bg-foreground" />
                 )}
               </Link>
             )

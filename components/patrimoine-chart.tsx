@@ -10,7 +10,6 @@ import {
   ReferenceLine,
   ResponsiveContainer,
 } from "recharts"
-import { cn } from "@/lib/utils"
 
 interface YearPoint {
   year: number
@@ -38,13 +37,13 @@ function CustomTooltip({
 }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-xl border border-border bg-popover px-3 py-2 text-xs shadow-md">
-      <p className="mb-1.5 font-medium text-foreground">Année {label}</p>
+    <div className="rounded-xl border border-border bg-popover px-4 py-3 text-sm shadow-md">
+      <p className="mb-2 font-medium text-foreground">Année {label}</p>
       {payload.map((p) => (
         <div key={p.name} className="flex items-center gap-2">
-          <span className="inline-block h-2 w-2 rounded-full" style={{ background: p.color }} />
+          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: p.color }} />
           <span className="text-muted-foreground">{p.name} :</span>
-          <span className="font-mono font-medium text-foreground">{fmtK(p.value)}</span>
+          <span className="font-mono font-semibold text-foreground">{fmtK(p.value)}</span>
         </div>
       ))}
     </div>
@@ -59,23 +58,23 @@ export function PatrimoineChart({
   breakeven: number | null
 }) {
   return (
-    <ResponsiveContainer width="100%" height={320}>
+    <ResponsiveContainer width="100%" height={360}>
       <LineChart data={points} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.922 0 0)" vertical={false} />
         <XAxis
           dataKey="year"
           tickLine={false}
           axisLine={false}
-          tick={{ fontSize: 11, fill: "oklch(0.556 0 0)" }}
+          tick={{ fontSize: 13, fill: "oklch(0.556 0 0)" }}
           tickFormatter={(v) => `${v} ans`}
           interval={4}
         />
         <YAxis
           tickLine={false}
           axisLine={false}
-          tick={{ fontSize: 11, fill: "oklch(0.556 0 0)" }}
+          tick={{ fontSize: 13, fill: "oklch(0.556 0 0)" }}
           tickFormatter={fmtK}
-          width={64}
+          width={72}
         />
         <Tooltip content={<CustomTooltip />} />
         <ReferenceLine y={0} stroke="oklch(0.708 0 0)" strokeWidth={1} />
@@ -88,7 +87,7 @@ export function PatrimoineChart({
             label={{
               value: `Équilibre an ${breakeven}`,
               position: "insideTopRight",
-              fontSize: 10,
+              fontSize: 12,
               fill: "oklch(0.439 0 0)",
             }}
           />
@@ -98,18 +97,18 @@ export function PatrimoineChart({
           dataKey="acheteur"
           name="Acheteur"
           stroke="oklch(0.205 0 0)"
-          strokeWidth={2}
+          strokeWidth={2.5}
           dot={false}
-          activeDot={{ r: 4, strokeWidth: 0 }}
+          activeDot={{ r: 5, strokeWidth: 0 }}
         />
         <Line
           type="monotone"
           dataKey="locataire"
           name="Locataire"
           stroke="oklch(0.556 0 0)"
-          strokeWidth={2}
+          strokeWidth={2.5}
           dot={false}
-          activeDot={{ r: 4, strokeWidth: 0 }}
+          activeDot={{ r: 5, strokeWidth: 0 }}
         />
       </LineChart>
     </ResponsiveContainer>

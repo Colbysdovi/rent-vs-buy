@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useLocalStorage } from "@/hooks/use-local-storage"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -46,12 +46,18 @@ interface Inputs {
 
 function compute(i: Inputs) {
   const fraisNotaire = i.prixAcquisition * 0.078
-  const fraisDossierMontant = (i.prixAcquisition - i.apport + fraisNotaire + i.fraisAgence + i.travaux + i.mobilier) * (i.fraisDossier / 100)
+  const fraisDossierMontant =
+    (i.prixAcquisition - i.apport + fraisNotaire + i.fraisAgence + i.travaux + i.mobilier) *
+    (i.fraisDossier / 100)
   const investissementTotal =
-    i.prixAcquisition + fraisNotaire + i.fraisAgence + i.travaux + i.mobilier + fraisDossierMontant
+    i.prixAcquisition +
+    fraisNotaire +
+    i.fraisAgence +
+    i.travaux +
+    i.mobilier +
+    fraisDossierMontant
   const emprunt = Math.max(0, investissementTotal - i.apport)
 
-  // Mensualité de prêt
   const tauxMensuel = i.tauxInteret / 100 / 12
   const nbMensualites = i.dureePret * 12
   let mensualite = 0
@@ -63,12 +69,10 @@ function compute(i: Inputs) {
   const assuranceMensuelle = i.assuranceEmprunteur / 12
   const mensualiteTotale = mensualite + assuranceMensuelle
 
-  // Revenus
   const loyersAnnuelsCC = (i.loyerMensuel + i.forfaitCharges) * 12
   const loyersApresVacance = loyersAnnuelsCC * (1 - i.vacanceLocative / 100)
   const honorairesGestion = loyersAnnuelsCC * (i.tauxGestion / 100)
 
-  // Charges
   const totalCharges =
     i.chargesCopro +
     i.assurancePNO +
@@ -79,16 +83,16 @@ function compute(i: Inputs) {
     i.honorairesMiseLocation +
     honorairesGestion
 
-  // Rendements
-  const rendementBrut = investissementTotal > 0 ? (loyersApresVacance / investissementTotal) * 100 : 0
+  const rendementBrut =
+    investissementTotal > 0 ? (loyersApresVacance / investissementTotal) * 100 : 0
   const rendementNetExploitation =
-    investissementTotal > 0 ? ((loyersApresVacance - totalCharges) / investissementTotal) * 100 : 0
+    investissementTotal > 0
+      ? ((loyersApresVacance - totalCharges) / investissementTotal) * 100
+      : 0
 
-  // Trésoreries mensuelles
   const tresorerieBrute = (loyersApresVacance - mensualiteTotale * 12) / 12
   const tresorerieNette = (loyersApresVacance - totalCharges - mensualiteTotale * 12) / 12
 
-  // Projection sur durée de détention
   let capitalRestantDu = emprunt
   for (let m = 0; m < Math.min(i.dureéDetention * 12, nbMensualites); m++) {
     const interet = capitalRestantDu * tauxMensuel
@@ -99,7 +103,6 @@ function compute(i: Inputs) {
   const valeurRevente =
     i.prixAcquisition * Math.pow(1 + i.valorisationMarche / 100, i.dureéDetention)
   const gainNetRevente = valeurRevente - i.prixAcquisition - capitalRestantDu
-
   const revenusNetsExploitation = (loyersApresVacance - totalCharges) * i.dureéDetention
   const capitalRembourse = emprunt - capitalRestantDu
   const epargneeNette = capitalRembourse + gainNetRevente
@@ -165,8 +168,8 @@ function NumericInput({
   hint?: string
 }) {
   return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id} className="text-sm font-medium">
+    <div className="space-y-2">
+      <Label htmlFor={id} className="text-base font-medium">
         {label}
       </Label>
       <div className="relative flex items-center">
@@ -177,15 +180,15 @@ function NumericInput({
           step={step}
           min={min}
           onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-          className="pr-10 font-mono text-sm"
+          className="pr-12 font-mono text-base"
         />
         {suffix && (
-          <span className="pointer-events-none absolute right-3 text-xs text-muted-foreground">
+          <span className="pointer-events-none absolute right-3 text-sm text-muted-foreground">
             {suffix}
           </span>
         )}
       </div>
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+      {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
     </div>
   )
 }
@@ -202,13 +205,13 @@ function StatRow({
   highlight?: boolean
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 py-1.5">
-      <span className={cn("text-sm", muted ? "text-muted-foreground" : "text-foreground")}>
+    <div className="flex items-baseline justify-between gap-4 py-2">
+      <span className={cn("text-base", muted ? "text-muted-foreground" : "text-foreground")}>
         {label}
       </span>
       <span
         className={cn(
-          "font-mono text-sm tabular-nums",
+          "font-mono text-base tabular-nums",
           highlight ? "font-semibold text-foreground" : "text-foreground",
           muted && "text-muted-foreground"
         )}
@@ -231,17 +234,17 @@ function MetricCard({
   negative?: boolean
 }) {
   return (
-    <Card className="p-4">
-      <p className="text-xs text-muted-foreground">{label}</p>
+    <Card className="p-5">
+      <p className="text-sm text-muted-foreground">{label}</p>
       <p
         className={cn(
-          "mt-1 font-mono text-2xl font-semibold tabular-nums",
+          "mt-1.5 font-mono text-3xl font-semibold tabular-nums",
           negative && "text-destructive"
         )}
       >
         {value}
       </p>
-      {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
+      {sub && <p className="mt-1 text-sm text-muted-foreground">{sub}</p>}
     </Card>
   )
 }
@@ -282,7 +285,7 @@ const defaults: Inputs = {
 // ——————————————————————————————————————————————————
 
 export default function Page() {
-  const [inputs, setInputs] = useState<Inputs>(defaults)
+  const [inputs, setInputs] = useLocalStorage<Inputs>("sim-locatif-v1", defaults)
 
   function set<K extends keyof Inputs>(key: K) {
     return (v: number) => setInputs((prev) => ({ ...prev, [key]: v }))
@@ -294,11 +297,11 @@ export default function Page() {
     <main className="min-h-screen bg-background px-4 py-10">
       <div className="mx-auto max-w-5xl space-y-8">
         {/* Header */}
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+        <div className="space-y-1.5">
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
             Simulateur de rendement locatif
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-base text-muted-foreground">
             Renseignez les paramètres de votre investissement pour estimer sa rentabilité.
           </p>
         </div>
@@ -334,19 +337,19 @@ export default function Page() {
           <div className="space-y-6">
             <Tabs defaultValue="bien">
               <TabsList className="w-full">
-                <TabsTrigger value="bien" className="flex-1 text-xs sm:text-sm">
+                <TabsTrigger value="bien" className="flex-1 text-sm">
                   Bien &amp; Coûts
                 </TabsTrigger>
-                <TabsTrigger value="financement" className="flex-1 text-xs sm:text-sm">
+                <TabsTrigger value="financement" className="flex-1 text-sm">
                   Financement
                 </TabsTrigger>
-                <TabsTrigger value="charges" className="flex-1 text-xs sm:text-sm">
+                <TabsTrigger value="charges" className="flex-1 text-sm">
                   Charges
                 </TabsTrigger>
-                <TabsTrigger value="revenus" className="flex-1 text-xs sm:text-sm">
+                <TabsTrigger value="revenus" className="flex-1 text-sm">
                   Revenus
                 </TabsTrigger>
-                <TabsTrigger value="projection" className="flex-1 text-xs sm:text-sm">
+                <TabsTrigger value="projection" className="flex-1 text-sm">
                   Projection
                 </TabsTrigger>
               </TabsList>
@@ -355,7 +358,7 @@ export default function Page() {
               <TabsContent value="bien" className="mt-4 space-y-4">
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Caractéristiques du bien</CardTitle>
+                    <CardTitle className="text-lg">Caractéristiques du bien</CardTitle>
                   </CardHeader>
                   <CardContent className="grid gap-4 sm:grid-cols-2">
                     <NumericInput
@@ -398,14 +401,16 @@ export default function Page() {
                       suffix="€"
                       step={500}
                     />
-                    <div className="space-y-2 rounded-xl bg-muted/50 p-3">
+                    <div className="space-y-3 rounded-xl bg-muted/50 p-4">
                       <div>
-                        <p className="text-xs text-muted-foreground">Frais de notaire (7,8 %)</p>
-                        <p className="font-mono text-sm font-medium">{fmt(r.fraisNotaire)}</p>
+                        <p className="text-sm text-muted-foreground">Frais de notaire (7,8 %)</p>
+                        <p className="font-mono text-base font-medium">{fmt(r.fraisNotaire)}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Investissement total</p>
-                        <p className="font-mono text-sm font-semibold">{fmt(r.investissementTotal)}</p>
+                        <p className="text-sm text-muted-foreground">Investissement total</p>
+                        <p className="font-mono text-base font-semibold">
+                          {fmt(r.investissementTotal)}
+                        </p>
                       </div>
                     </div>
                   </CardContent>
@@ -416,7 +421,7 @@ export default function Page() {
               <TabsContent value="financement" className="mt-4 space-y-4">
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Structure de financement</CardTitle>
+                    <CardTitle className="text-lg">Structure de financement</CardTitle>
                   </CardHeader>
                   <CardContent className="grid gap-4 sm:grid-cols-2">
                     <NumericInput
@@ -427,9 +432,9 @@ export default function Page() {
                       suffix="€"
                       step={1000}
                     />
-                    <div className="space-y-1 rounded-xl bg-muted/50 p-3">
-                      <p className="text-xs text-muted-foreground">Montant emprunté</p>
-                      <p className="font-mono text-sm font-semibold">{fmt(r.emprunt)}</p>
+                    <div className="space-y-1 rounded-xl bg-muted/50 p-4">
+                      <p className="text-sm text-muted-foreground">Montant emprunté</p>
+                      <p className="font-mono text-base font-semibold">{fmt(r.emprunt)}</p>
                     </div>
                     <NumericInput
                       id="taux"
@@ -467,11 +472,11 @@ export default function Page() {
                       step={50}
                       min={0}
                     />
-                    <div className="col-span-full rounded-xl bg-muted/50 p-3">
-                      <p className="text-xs text-muted-foreground">
+                    <div className="col-span-full rounded-xl bg-muted/50 p-4">
+                      <p className="text-sm text-muted-foreground">
                         Mensualité estimée (capital + intérêts + assurance)
                       </p>
-                      <p className="font-mono text-lg font-semibold">
+                      <p className="font-mono text-xl font-semibold">
                         {fmt(r.mensualiteTotale, { decimals: 2 })} / mois
                       </p>
                     </div>
@@ -483,9 +488,7 @@ export default function Page() {
               <TabsContent value="charges" className="mt-4 space-y-4">
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base">
-                      Charges d&apos;exploitation annuelles
-                    </CardTitle>
+                    <CardTitle className="text-lg">Charges d&apos;exploitation annuelles</CardTitle>
                   </CardHeader>
                   <CardContent className="grid gap-4 sm:grid-cols-2">
                     <NumericInput
@@ -552,9 +555,9 @@ export default function Page() {
                       min={0}
                       hint={`= ${fmt(r.honorairesGestion, { decimals: 0 })} / an`}
                     />
-                    <div className="col-span-full rounded-xl bg-muted/50 p-3">
-                      <p className="text-xs text-muted-foreground">Total charges annuelles</p>
-                      <p className="font-mono text-sm font-semibold">
+                    <div className="col-span-full rounded-xl bg-muted/50 p-4">
+                      <p className="text-sm text-muted-foreground">Total charges annuelles</p>
+                      <p className="font-mono text-base font-semibold">
                         {fmt(r.totalCharges, { decimals: 0 })} / an
                       </p>
                     </div>
@@ -566,7 +569,7 @@ export default function Page() {
               <TabsContent value="revenus" className="mt-4 space-y-4">
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Revenus locatifs</CardTitle>
+                    <CardTitle className="text-lg">Revenus locatifs</CardTitle>
                   </CardHeader>
                   <CardContent className="grid gap-4 sm:grid-cols-2">
                     <NumericInput
@@ -595,14 +598,14 @@ export default function Page() {
                       min={0}
                       hint={`≈ ${Math.round((inputs.vacanceLocative / 100) * 365)} jours/an`}
                     />
-                    <div className="space-y-2 rounded-xl bg-muted/50 p-3">
+                    <div className="space-y-3 rounded-xl bg-muted/50 p-4">
                       <div>
-                        <p className="text-xs text-muted-foreground">Loyers bruts annuels CC</p>
-                        <p className="font-mono text-sm font-medium">{fmt(r.loyersAnnuelsCC)}</p>
+                        <p className="text-sm text-muted-foreground">Loyers bruts annuels CC</p>
+                        <p className="font-mono text-base font-medium">{fmt(r.loyersAnnuelsCC)}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Après vacance locative</p>
-                        <p className="font-mono text-sm font-semibold">
+                        <p className="text-sm text-muted-foreground">Après vacance locative</p>
+                        <p className="font-mono text-base font-semibold">
                           {fmt(r.loyersApresVacance, { decimals: 0 })}
                         </p>
                       </div>
@@ -615,7 +618,7 @@ export default function Page() {
               <TabsContent value="projection" className="mt-4 space-y-4">
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Paramètres de projection</CardTitle>
+                    <CardTitle className="text-lg">Paramètres de projection</CardTitle>
                   </CardHeader>
                   <CardContent className="grid gap-4 sm:grid-cols-2">
                     <NumericInput
@@ -644,18 +647,20 @@ export default function Page() {
                       step={0.1}
                       min={0}
                     />
-                    <div className="space-y-2 rounded-xl bg-muted/50 p-3">
+                    <div className="space-y-3 rounded-xl bg-muted/50 p-4">
                       <div>
-                        <p className="text-xs text-muted-foreground">Valeur estimée à la revente</p>
-                        <p className="font-mono text-sm font-semibold">
+                        <p className="text-sm text-muted-foreground">
+                          Valeur estimée à la revente
+                        </p>
+                        <p className="font-mono text-base font-semibold">
                           {fmt(r.valeurRevente, { decimals: 0 })}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-sm text-muted-foreground">
                           Gain net revente (après CRD)
                         </p>
-                        <p className="font-mono text-sm font-medium">
+                        <p className="font-mono text-base font-medium">
                           {fmt(r.gainNetRevente, { decimals: 0 })}
                         </p>
                       </div>
@@ -670,7 +675,7 @@ export default function Page() {
           <div className="space-y-4">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Bilan financier</CardTitle>
+                <CardTitle className="text-lg">Bilan financier</CardTitle>
               </CardHeader>
               <CardContent className="space-y-0.5">
                 <StatRow
@@ -683,7 +688,10 @@ export default function Page() {
 
                 <Separator className="my-3" />
 
-                <StatRow label="Loyers annuels nets" value={fmt(r.loyersApresVacance, { decimals: 0 })} />
+                <StatRow
+                  label="Loyers annuels nets"
+                  value={fmt(r.loyersApresVacance, { decimals: 0 })}
+                />
                 <StatRow
                   label="Charges annuelles"
                   value={`− ${fmt(r.totalCharges, { decimals: 0 })}`}
@@ -719,7 +727,7 @@ export default function Page() {
 
                 <Separator className="my-3" />
 
-                <p className="mb-1 text-xs font-medium text-muted-foreground">
+                <p className="mb-1 text-sm font-medium text-muted-foreground">
                   À la revente ({inputs.dureéDetention} ans)
                 </p>
                 <StatRow label="Valeur estimée" value={fmt(r.valeurRevente, { decimals: 0 })} />
@@ -746,13 +754,13 @@ export default function Page() {
               </CardContent>
             </Card>
 
-            <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2">
-              <Badge variant="secondary" className="mt-0.5 shrink-0 text-xs">
+            <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/30 px-4 py-3">
+              <Badge variant="secondary" className="mt-0.5 shrink-0">
                 Info
               </Badge>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Simulation indicative. Fiscalité et plus-value non incluses. Appuyez sur{" "}
-                <kbd className="rounded border border-border px-1 font-mono text-xs">D</kbd> pour
+                <kbd className="rounded border border-border px-1.5 font-mono text-sm">D</kbd> pour
                 basculer le thème.
               </p>
             </div>
