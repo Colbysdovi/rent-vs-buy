@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import React, { useMemo } from "react"
 import dynamic from "next/dynamic"
 import { useLocalStorage } from "@/hooks/use-local-storage"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,6 +21,11 @@ const PatrimoineChart = dynamic(
       </div>
     ),
   }
+)
+
+const BudgetChart = dynamic(
+  () => import("@/components/budget-chart").then((m) => m.BudgetChart),
+  { ssr: false, loading: () => <div className="h-[140px]" /> }
 )
 
 // ——————————————————————————————————————————————————
@@ -266,6 +271,7 @@ function NumericInput({
   step = 100,
   min = 0,
   hint,
+  badge,
 }: {
   id: string
   label: string
@@ -275,11 +281,15 @@ function NumericInput({
   step?: number
   min?: number
   hint?: string
+  badge?: string
 }) {
   return (
     <div className="space-y-2">
       <Label htmlFor={id} className="text-base font-medium">
         {label}
+        {badge && (
+          <span className="ml-2 font-normal text-xs text-muted-foreground/70">{badge}</span>
+        )}
       </Label>
       <div className="relative flex items-center">
         <Input
@@ -308,7 +318,7 @@ function StatRow({
   muted,
   highlight,
 }: {
-  label: string
+  label: React.ReactNode
   value: string
   muted?: boolean
   highlight?: boolean
@@ -416,6 +426,7 @@ export default function Page() {
         (Math.pow(1 + tauxMensuel, nbMois) - 1)
       : emprunt / nbMois
   const mensualiteTotale = mensualite + inputs.assuranceEmprunteur / 12
+  const interetsTotaux = mensualite * nbMois - emprunt
   const chargesProprioMensuel =
     (inputs.taxeFonciere +
       inputs.chargesCopro +
@@ -618,6 +629,34 @@ export default function Page() {
                     </div>
                   )}
 
+                  {hasFinancialProfile && (
+                    <div className="col-span-full space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Répartition du budget mensuel
+                      </p>
+                      <BudgetChart
+                        achat={{
+                          label: "Si achat",
+                          logement: mensualiteTotale,
+                          chargesLogement: chargesProprioMensuel,
+                          chargesFixes: inputs.chargesFixes,
+                          autresCredits: inputs.autresCredits,
+                          reste: Math.max(0, resteAVivreAchat),
+                          deficit: resteAVivreAchat < 0 ? Math.abs(resteAVivreAchat) : 0,
+                        }}
+                        location={{
+                          label: "Si location",
+                          logement: inputs.loyerMensuelCC,
+                          chargesLogement: inputs.assuranceLocataire / 12,
+                          chargesFixes: inputs.chargesFixes,
+                          autresCredits: inputs.autresCredits,
+                          reste: Math.max(0, resteAVivreLocation),
+                          deficit: resteAVivreLocation < 0 ? Math.abs(resteAVivreLocation) : 0,
+                        }}
+                      />
+                    </div>
+                  )}
+
                   {!hasFinancialProfile && (
                     <div className="col-span-full rounded-xl border border-border bg-muted/30 px-4 py-3">
                       <p className="text-sm text-muted-foreground">
@@ -675,6 +714,7 @@ export default function Page() {
                         onChange={set("fraisAgenceAchat")}
                         suffix="€"
                         step={500}
+                        badge="non récupérable"
                       />
                       <NumericInput
                         id="travaux"
@@ -695,7 +735,10 @@ export default function Page() {
                       />
                       <div className="space-y-2 rounded-xl bg-muted/50 p-4">
                         <div>
-                          <p className="text-sm text-muted-foreground">Frais de notaire (7,8 %)</p>
+                          <p className="text-sm text-muted-foreground">
+                            Frais de notaire (7,8 %)
+                            <span className="ml-1.5 text-xs text-muted-foreground/70">non récupérables</span>
+                          </p>
                           <p className="font-mono text-base font-medium">{fmt(fraisNotaire)}</p>
                         </div>
                         <div>
@@ -737,6 +780,7 @@ export default function Page() {
                         suffix="€/an"
                         step={50}
                         min={0}
+                        badge="non récupérable"
                       />
                       <div className="rounded-xl bg-muted/50 p-4">
                         <p className="text-sm text-muted-foreground">
@@ -759,6 +803,7 @@ export default function Page() {
                         value={inputs.taxeFonciere}
                         onChange={set("taxeFonciere")}
                         suffix="€/an"
+                        badge="non récupérable"
                       />
                       <NumericInput
                         id="copro"
@@ -766,6 +811,7 @@ export default function Page() {
                         value={inputs.chargesCopro}
                         onChange={set("chargesCopro")}
                         suffix="€/an"
+                        badge="non récupérable"
                       />
                       <NumericInput
                         id="entretien"
@@ -776,6 +822,7 @@ export default function Page() {
                         step={0.1}
                         min={0}
                         hint={`= ${fmt((inputs.prix * inputs.entretienPct) / 100, { decimals: 0 })} / an`}
+                        badge="non récupérable"
                       />
                       <NumericInput
                         id="asshabproprio"
@@ -784,6 +831,7 @@ export default function Page() {
                         onChange={set("assuranceHabProprio")}
                         suffix="€/an"
                         step={20}
+                        badge="non récupérable"
                       />
                       <div className="col-span-full rounded-xl bg-muted/50 p-4">
                         <p className="text-sm text-muted-foreground">
@@ -902,6 +950,16 @@ export default function Page() {
                     Coûts mensuels
                   </p>
                   <StatRow label="Mensualité crédit" value={fmt(mensualiteTotale, { decimals: 0 })} />
+                  <StatRow
+                    label={
+                      <span>
+                        dont intérêts estimés
+                        <span className="ml-1.5 text-xs text-muted-foreground/70">non récupérables</span>
+                      </span>
+                    }
+                    value={`≈ ${fmt(interetsTotaux / nbMois, { decimals: 0 })}/mois`}
+                    muted
+                  />
                   <StatRow label="Charges proprio" value={fmt(chargesProprioMensuel, { decimals: 0 })} muted />
                   <StatRow label="Total achat / mois" value={fmt(buyerMonthlyTotal, { decimals: 0 })} highlight />
                   <StatRow label="Total location / mois" value={fmt(renterMonthlyTotal, { decimals: 0 })} highlight />
