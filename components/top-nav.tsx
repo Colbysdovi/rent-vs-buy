@@ -32,7 +32,7 @@ export function TopNav() {
               >
                 {item.label}
                 {active && (
-                  <span className="absolute bottom-0 left-4 right-4 h-px bg-foreground" />
+                  <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-primary" />
                 )}
               </Link>
             )

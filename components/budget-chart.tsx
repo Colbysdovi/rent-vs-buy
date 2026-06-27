@@ -15,12 +15,12 @@ export interface BudgetScenario {
 const KEYS = ["logement", "chargesLogement", "chargesFixes", "autresCredits", "reste", "deficit"] as const
 
 const COLORS: Record<(typeof KEYS)[number], string> = {
-  logement:        "hsl(0 0% 13%)",
-  chargesLogement: "hsl(0 0% 40%)",
-  chargesFixes:    "hsl(0 0% 60%)",
-  autresCredits:   "hsl(0 0% 75%)",
-  reste:           "hsl(0 0% 88%)",
-  deficit:         "hsl(0 72% 51%)",
+  logement:        "#31485D",   /* Pickled Bluewood */
+  chargesLogement: "#3A546A",   /* Fiord */
+  chargesFixes:    "#005DAD",   /* Endeavour */
+  autresCredits:   "#006DFF",   /* Brandeis Blue */
+  reste:           "#C4CACE",   /* Loblolly */
+  deficit:         "#EE523D",   /* Carmine Pink */
 }
 
 const LABELS: Record<(typeof KEYS)[number], string> = {

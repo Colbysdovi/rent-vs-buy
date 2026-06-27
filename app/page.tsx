@@ -420,10 +420,10 @@ export default function Page() {
 
   const bannerCls = recommendation
     ? recommendation.decision === "favorable"
-      ? "bg-secondary border-border"
+      ? "bg-primary/5 border-primary/20"
       : recommendation.decision === "defavorable"
         ? "bg-destructive/5 border-destructive/20"
-        : "bg-muted/60 border-border"
+        : "bg-[#F4CB00]/10 border-[#F4CB00]/40"
     : ""
 
   const badgeCls = recommendation
@@ -431,7 +431,7 @@ export default function Page() {
       ? "bg-primary text-primary-foreground"
       : recommendation.decision === "defavorable"
         ? "bg-destructive/10 text-destructive"
-        : "bg-secondary text-secondary-foreground"
+        : "bg-[#F4CB00]/30 text-[#DC5D00]"
     : ""
 
   return (

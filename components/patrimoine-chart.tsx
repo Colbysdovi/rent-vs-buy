@@ -81,14 +81,14 @@ export function PatrimoineChart({
         {breakeven !== null && (
           <ReferenceLine
             x={breakeven}
-            stroke="oklch(0.439 0 0)"
+            stroke="#005DAD"
             strokeDasharray="4 3"
             strokeWidth={1.5}
             label={{
               value: `Équilibre an ${breakeven}`,
               position: "insideTopRight",
               fontSize: 12,
-              fill: "oklch(0.439 0 0)",
+              fill: "#005DAD",
             }}
           />
         )}
@@ -96,7 +96,7 @@ export function PatrimoineChart({
           type="monotone"
           dataKey="acheteur"
           name="Acheteur"
-          stroke="oklch(0.205 0 0)"
+          stroke="#006DFF"
           strokeWidth={2.5}
           dot={false}
           activeDot={{ r: 5, strokeWidth: 0 }}
@@ -105,7 +105,7 @@ export function PatrimoineChart({
           type="monotone"
           dataKey="locataire"
           name="Locataire"
-          stroke="oklch(0.556 0 0)"
+          stroke="#C4CACE"
           strokeWidth={2.5}
           dot={false}
           activeDot={{ r: 5, strokeWidth: 0 }}
