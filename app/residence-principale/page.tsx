@@ -427,6 +427,16 @@ export default function Page() {
       : emprunt / nbMois
   const mensualiteTotale = mensualite + inputs.assuranceEmprunteur / 12
   const interetsTotaux = mensualite * nbMois - emprunt
+  const chargesNonRecuperablesTotales =
+    fraisNotaire +
+    inputs.fraisAgenceAchat +
+    interetsTotaux +
+    inputs.assuranceEmprunteur * inputs.dureePret +
+    (inputs.taxeFonciere +
+      inputs.chargesCopro +
+      (inputs.prix * inputs.entretienPct) / 100 +
+      inputs.assuranceHabProprio) *
+      inputs.horizon
   const chargesProprioMensuel =
     (inputs.taxeFonciere +
       inputs.chargesCopro +
@@ -534,7 +544,8 @@ export default function Page() {
                     reste à vivre et de formuler une recommandation.
                   </p>
                 </CardHeader>
-                <CardContent className="grid gap-4 sm:grid-cols-2">
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
                   <NumericInput
                     id="revenus"
                     label="Revenus nets mensuels du foyer"
@@ -629,8 +640,18 @@ export default function Page() {
                     </div>
                   )}
 
+                  {!hasFinancialProfile && (
+                    <div className="col-span-full rounded-xl border border-border bg-muted/30 px-4 py-3">
+                      <p className="text-sm text-muted-foreground">
+                        Renseignez vos revenus nets pour obtenir une analyse personnalisée et une
+                        recommandation.
+                      </p>
+                    </div>
+                  )}
+                  </div>
+
                   {hasFinancialProfile && (
-                    <div className="col-span-full space-y-2">
+                    <div className="space-y-2">
                       <p className="text-sm font-medium text-muted-foreground">
                         Répartition du budget mensuel
                       </p>
@@ -654,15 +675,6 @@ export default function Page() {
                           deficit: resteAVivreLocation < 0 ? Math.abs(resteAVivreLocation) : 0,
                         }}
                       />
-                    </div>
-                  )}
-
-                  {!hasFinancialProfile && (
-                    <div className="col-span-full rounded-xl border border-border bg-muted/30 px-4 py-3">
-                      <p className="text-sm text-muted-foreground">
-                        Renseignez vos revenus nets pour obtenir une analyse personnalisée et une
-                        recommandation.
-                      </p>
                     </div>
                   )}
                 </CardContent>
@@ -963,6 +975,27 @@ export default function Page() {
                   <StatRow label="Charges proprio" value={fmt(chargesProprioMensuel, { decimals: 0 })} muted />
                   <StatRow label="Total achat / mois" value={fmt(buyerMonthlyTotal, { decimals: 0 })} highlight />
                   <StatRow label="Total location / mois" value={fmt(renterMonthlyTotal, { decimals: 0 })} highlight />
+
+                  <Separator className="my-3" />
+
+                  <p className="mb-1 text-sm font-medium text-muted-foreground">
+                    Coûts non récupérables sur {inputs.horizon} ans
+                  </p>
+                  <StatRow
+                    label={
+                      <span>
+                        dont intérêts du prêt
+                        <span className="ml-1.5 text-xs text-muted-foreground/70">sur {inputs.dureePret} ans</span>
+                      </span>
+                    }
+                    value={fmtK(interetsTotaux)}
+                    muted
+                  />
+                  <StatRow
+                    label="Total charges non récupérables"
+                    value={fmtK(chargesNonRecuperablesTotales)}
+                    highlight
+                  />
 
                   <Separator className="my-3" />
 
