@@ -4,7 +4,7 @@ import React, { useMemo } from "react"
 import dynamic from "next/dynamic"
 import { useLocalStorage } from "@/hooks/use-local-storage"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { NumberField } from "@/components/number-field"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -292,13 +292,10 @@ function NumericInput({
         )}
       </Label>
       <div className="relative flex items-center">
-        <Input
+        <NumberField
           id={id}
-          type="number"
           value={value}
-          step={step}
-          min={min}
-          onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+          onChange={onChange}
           className="pr-12 font-mono text-base"
         />
         {suffix && (
