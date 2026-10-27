@@ -7,6 +7,7 @@ import { motion, useReducedMotion } from "motion/react"
 
 import { cn } from "@/lib/utils"
 import { press, spring } from "@/lib/motion-tokens"
+import { Card } from "@/components/ui/card"
 
 const TabsValueContext = React.createContext<{ value?: string; id: string }>({ id: "" })
 
@@ -120,9 +121,10 @@ function TabsContent({
       {...props}
     >
       <motion.div
-        initial={reduced ? { opacity: 0 } : { opacity: 0, filter: "blur(4px)" }}
-        animate={{ opacity: 1, filter: "blur(0px)" }}
-        transition={reduced ? { duration: 0.15 } : spring.content}
+        className="flex flex-col gap-(--card-spacing)"
+        initial={reduced ? { opacity: 0 } : { opacity: 0, y: 8, filter: "blur(4px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={reduced ? { duration: 0.15 } : { ...spring.content, delay: 0.08 }}
       >
         {children}
       </motion.div>
@@ -130,4 +132,31 @@ function TabsContent({
   )
 }
 
-export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants }
+// One persistent card for all panels: it resizes between tabs, only the content swaps.
+function TabsPanels({ className, children }: { className?: string; children: React.ReactNode }) {
+  const reduced = useReducedMotion()
+  const ref = React.useRef<HTMLDivElement>(null)
+  const [height, setHeight] = React.useState<number | "auto">("auto")
+  React.useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setHeight(el.offsetHeight))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  return (
+    <Card className={cn("gap-0 py-0", className)}>
+      <motion.div
+        initial={false}
+        animate={{ height }}
+        transition={reduced ? { duration: 0 } : spring.surface}
+      >
+        <div ref={ref} className="py-(--card-spacing)">
+          {children}
+        </div>
+      </motion.div>
+    </Card>
+  )
+}
+
+export { Tabs, TabsList, TabsTrigger, TabsContent, TabsPanels, tabsListVariants }

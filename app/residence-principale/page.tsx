@@ -8,7 +8,7 @@ import { NumberField } from "@/components/number-field"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsPanels, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import { CascadeItem, Disclosure, RollText } from "@/components/reveal"
 
@@ -708,9 +708,9 @@ export default function Page() {
                     Marché
                   </TabsTrigger>
                 </TabsList>
+                <TabsPanels className="mt-2">
 
-                <TabsContent value="bien" className="mt-4">
-                  <Card>
+                <TabsContent value="bien">
                     <CardContent className="grid gap-4 pt-5 sm:grid-cols-2">
                       <NumericInput
                         id="prix"
@@ -768,11 +768,9 @@ export default function Page() {
                         </div>
                       </div>
                     </CardContent>
-                  </Card>
                 </TabsContent>
 
-                <TabsContent value="financement" className="mt-4">
-                  <Card>
+                <TabsContent value="financement">
                     <CardContent className="grid gap-4 pt-5 sm:grid-cols-2">
                       <NumericInput
                         id="taux"
@@ -812,11 +810,9 @@ export default function Page() {
                         </p>
                       </div>
                     </CardContent>
-                  </Card>
                 </TabsContent>
 
-                <TabsContent value="charges" className="mt-4">
-                  <Card>
+                <TabsContent value="charges">
                     <CardContent className="grid gap-4 pt-5 sm:grid-cols-2">
                       <NumericInput
                         id="tf"
@@ -864,11 +860,9 @@ export default function Page() {
                         </p>
                       </div>
                     </CardContent>
-                  </Card>
                 </TabsContent>
 
-                <TabsContent value="location" className="mt-4">
-                  <Card>
+                <TabsContent value="location">
                     <CardContent className="grid gap-4 pt-5 sm:grid-cols-2">
                       <NumericInput
                         id="loyer"
@@ -901,11 +895,9 @@ export default function Page() {
                         </p>
                       </div>
                     </CardContent>
-                  </Card>
                 </TabsContent>
 
-                <TabsContent value="marche" className="mt-4">
-                  <Card>
+                <TabsContent value="marche">
                     <CardContent className="grid gap-4 pt-5 sm:grid-cols-2">
                       <NumericInput
                         id="apprec"
@@ -945,8 +937,8 @@ export default function Page() {
                         min={5}
                       />
                     </CardContent>
-                  </Card>
                 </TabsContent>
+                </TabsPanels>
               </Tabs>
             </div>
 

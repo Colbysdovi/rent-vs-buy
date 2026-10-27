@@ -6,7 +6,7 @@ import { NumberField } from "@/components/number-field"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsPanels, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import { CascadeItem, Disclosure, RollText } from "@/components/reveal"
 
@@ -653,10 +653,10 @@ export default function Page() {
                     Projection
                   </TabsTrigger>
                 </TabsList>
+                <TabsPanels className="mt-2">
 
                 {/* Bien */}
-                <TabsContent value="bien" className="mt-4 space-y-4">
-                  <Card>
+                <TabsContent value="bien">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-lg">Caractéristiques du bien</CardTitle>
                     </CardHeader>
@@ -714,12 +714,10 @@ export default function Page() {
                         </div>
                       </div>
                     </CardContent>
-                  </Card>
                 </TabsContent>
 
                 {/* Financement */}
-                <TabsContent value="financement" className="mt-4 space-y-4">
-                  <Card>
+                <TabsContent value="financement">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-lg">Structure de financement</CardTitle>
                     </CardHeader>
@@ -781,12 +779,10 @@ export default function Page() {
                         </p>
                       </div>
                     </CardContent>
-                  </Card>
                 </TabsContent>
 
                 {/* Charges */}
-                <TabsContent value="charges" className="mt-4 space-y-4">
-                  <Card>
+                <TabsContent value="charges">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-lg">Charges d&apos;exploitation annuelles</CardTitle>
                     </CardHeader>
@@ -862,12 +858,10 @@ export default function Page() {
                         </p>
                       </div>
                     </CardContent>
-                  </Card>
                 </TabsContent>
 
                 {/* Revenus */}
-                <TabsContent value="revenus" className="mt-4 space-y-4">
-                  <Card>
+                <TabsContent value="revenus">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-lg">Revenus locatifs</CardTitle>
                     </CardHeader>
@@ -913,12 +907,10 @@ export default function Page() {
                         </div>
                       </div>
                     </CardContent>
-                  </Card>
                 </TabsContent>
 
                 {/* Projection */}
-                <TabsContent value="projection" className="mt-4 space-y-4">
-                  <Card>
+                <TabsContent value="projection">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-lg">Paramètres de projection</CardTitle>
                     </CardHeader>
@@ -968,8 +960,8 @@ export default function Page() {
                         </div>
                       </div>
                     </CardContent>
-                  </Card>
                 </TabsContent>
+                </TabsPanels>
               </Tabs>
             </div>
 
