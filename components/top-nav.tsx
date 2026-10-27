@@ -10,8 +10,8 @@ import { press, spring } from "@/lib/motion-tokens"
 const MotionLink = motion.create(Link)
 
 const items: { label: string; short: string; href: string; icon: LucideIcon }[] = [
-  { label: "Rendement Locatif", short: "Locatif", href: "/", icon: TrendingUp },
   { label: "Résidence Principale", short: "Résidence", href: "/residence-principale", icon: Home },
+  { label: "Rendement Locatif", short: "Locatif", href: "/", icon: TrendingUp },
 ]
 
 export function TopNav() {
