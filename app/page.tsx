@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
+import { CascadeItem, Disclosure, RollText } from "@/components/reveal"
 
 // ——————————————————————————————————————————————————
 // Types
@@ -434,8 +435,9 @@ export default function Page() {
   return (
     <>
       {/* ── Recommendation Banner ── */}
+      <Disclosure show={!!recommendation}>
       {recommendation && (
-        <div className={cn("border-b px-4 py-5", bannerCls)}>
+        <div className={cn("border-b px-4 py-5 transition-colors duration-300", bannerCls)}>
           <div className="mx-auto flex max-w-5xl items-start gap-4">
             <Badge
               className={cn(
@@ -443,7 +445,7 @@ export default function Page() {
                 badgeCls
               )}
             >
-              {recommendation.titre}
+              <RollText text={recommendation.titre} />
             </Badge>
             <p className="text-base leading-relaxed text-foreground">
               {recommendation.explication}
@@ -451,6 +453,7 @@ export default function Page() {
           </div>
         </div>
       )}
+      </Disclosure>
 
       <main className="min-h-screen bg-background px-4 py-10">
         <div className="mx-auto max-w-5xl space-y-8">
@@ -511,8 +514,9 @@ export default function Page() {
                 hint="Enfants, parents ou autres dépendants"
               />
 
+              <Disclosure show={hasFinancialProfile} className="col-span-full">
               {hasFinancialProfile && (
-                <div className="col-span-full grid grid-cols-3 gap-3">
+                <CascadeItem index={0} className="grid grid-cols-3 gap-3">
                   {/* Taux d'endettement */}
                   <div
                     className={cn(
@@ -582,17 +586,20 @@ export default function Page() {
                       Seuil : {fmt(seuilResteAVivre)}
                     </p>
                   </div>
-                </div>
+                </CascadeItem>
               )}
+              </Disclosure>
 
+              <Disclosure show={!hasFinancialProfile} className="col-span-full">
               {!hasFinancialProfile && (
-                <div className="col-span-full rounded-xl border border-border bg-muted/30 px-4 py-3">
+                <div className="rounded-xl border border-border bg-muted/30 px-4 py-3">
                   <p className="text-sm text-muted-foreground">
                     Renseignez vos revenus nets pour obtenir une analyse de faisabilité et une
                     recommandation personnalisée.
                   </p>
                 </div>
               )}
+              </Disclosure>
             </CardContent>
           </Card>
 

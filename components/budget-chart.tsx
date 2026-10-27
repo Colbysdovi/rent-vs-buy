@@ -1,6 +1,8 @@
 "use client"
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
+import { useReducedMotion } from "motion/react"
+import { chartAnimation } from "@/lib/motion-tokens"
 
 export interface BudgetScenario {
   label: string
@@ -54,6 +56,7 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: any[] 
 }
 
 export function BudgetChart({ achat, location }: { achat: BudgetScenario; location: BudgetScenario }) {
+  const reduced = useReducedMotion()
   const data = [
     { scenario: achat.label, ...achat },
     { scenario: location.label, ...location },
@@ -85,7 +88,7 @@ export function BudgetChart({ achat, location }: { achat: BudgetScenario; locati
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(0 0% 97%)" }} />
           {KEYS.map((k) => (
-            <Bar key={k} dataKey={k} stackId="a" fill={COLORS[k]} name={LABELS[k]} />
+            <Bar key={k} dataKey={k} stackId="a" fill={COLORS[k]} name={LABELS[k]} isAnimationActive={!reduced} {...chartAnimation} />
           ))}
         </BarChart>
       </ResponsiveContainer>

@@ -10,6 +10,8 @@ import {
   ReferenceLine,
   ResponsiveContainer,
 } from "recharts"
+import { useReducedMotion } from "motion/react"
+import { chartAnimation } from "@/lib/motion-tokens"
 
 interface YearPoint {
   year: number
@@ -57,6 +59,7 @@ export function PatrimoineChart({
   points: YearPoint[]
   breakeven: number | null
 }) {
+  const reduced = useReducedMotion()
   return (
     <ResponsiveContainer width="100%" height={360}>
       <LineChart data={points} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
@@ -99,6 +102,8 @@ export function PatrimoineChart({
           stroke="#006DFF"
           strokeWidth={2.5}
           dot={false}
+          isAnimationActive={!reduced}
+          {...chartAnimation}
           activeDot={{ r: 5, strokeWidth: 0 }}
         />
         <Line
@@ -108,6 +113,8 @@ export function PatrimoineChart({
           stroke="#C4CACE"
           strokeWidth={2.5}
           dot={false}
+          isAnimationActive={!reduced}
+          {...chartAnimation}
           activeDot={{ r: 5, strokeWidth: 0 }}
         />
       </LineChart>

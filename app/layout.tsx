@@ -4,6 +4,7 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { TopNav } from "@/components/top-nav"
+import { MotionProvider } from "@/components/motion-provider"
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -33,8 +34,10 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>
-          <TopNav />
-          {children}
+          <MotionProvider>
+            <TopNav />
+            {children}
+          </MotionProvider>
         </ThemeProvider>
       </body>
     </html>

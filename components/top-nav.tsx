@@ -3,7 +3,11 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Calculator, Home, TrendingUp, type LucideIcon } from "lucide-react"
+import { motion, useReducedMotion } from "motion/react"
 import { cn } from "@/lib/utils"
+import { press, spring } from "@/lib/motion-tokens"
+
+const MotionLink = motion.create(Link)
 
 const items: { label: string; short: string; href: string; icon: LucideIcon }[] = [
   { label: "Rendement Locatif", short: "Locatif", href: "/", icon: TrendingUp },
@@ -12,6 +16,7 @@ const items: { label: string; short: string; href: string; icon: LucideIcon }[] 
 
 export function TopNav() {
   const pathname = usePathname()
+  const reduced = useReducedMotion()
 
   return (
     <header className="sticky top-0 z-40 px-3 pt-3">
@@ -33,21 +38,32 @@ export function TopNav() {
           {items.map((item) => {
             const active = pathname === item.href
             return (
-              <Link
+              <MotionLink
                 key={item.href}
                 href={item.href}
                 aria-current={active ? "page" : undefined}
+                whileTap={press}
+                transition={spring.small}
                 className={cn(
-                  "flex h-11 items-center gap-2 rounded-xl px-4 text-sm font-medium transition-colors",
+                  "relative flex h-11 items-center rounded-xl px-4 text-sm font-medium transition-colors duration-150",
                   active
-                    ? "bg-primary/10 text-primary ring-1 ring-primary/15"
+                    ? "text-primary"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
-                <item.icon className="size-4" />
-                <span className="sm:hidden">{item.short}</span>
-                <span className="hidden sm:inline">{item.label}</span>
-              </Link>
+                {active && (
+                  <motion.span
+                    layoutId={reduced ? undefined : "nav-active"}
+                    transition={spring.small}
+                    className="absolute inset-0 rounded-xl bg-primary/10 ring-1 ring-primary/15"
+                  />
+                )}
+                <span className="relative flex items-center gap-2">
+                  <item.icon className="size-4" />
+                  <span className="sm:hidden">{item.short}</span>
+                  <span className="hidden sm:inline">{item.label}</span>
+                </span>
+              </MotionLink>
             )
           })}
         </nav>
