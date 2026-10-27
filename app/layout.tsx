@@ -7,7 +7,7 @@ import { TopNav } from "@/components/top-nav"
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Simulateur Immobilier",
+  title: "Calculateur Immo",
   icons: {
     icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧮</text></svg>",
   },
