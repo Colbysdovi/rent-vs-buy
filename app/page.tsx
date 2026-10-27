@@ -273,10 +273,10 @@ function NumericInput({
           id={id}
           value={value}
           onChange={onChange}
-          className="pr-12 font-mono text-base"
+          className="pr-24 font-mono text-base"
         />
         {suffix && (
-          <span className="pointer-events-none absolute right-3 text-sm text-muted-foreground">
+          <span className="pointer-events-none absolute right-4 text-sm text-muted-foreground">
             {suffix}
           </span>
         )}
