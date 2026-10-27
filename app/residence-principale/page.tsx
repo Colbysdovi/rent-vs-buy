@@ -60,6 +60,7 @@ interface Inputs {
   // Marché
   tauxAppreciation: number
   tauxIRL: number
+  hausseCharges: number
   tauxEpargne: number
   fiscaliteEpargne: number
   horizon: number
@@ -120,6 +121,12 @@ function financement(i: Inputs) {
   }
 }
 
+// Sum of (1 + g)^t for t = 0..years-1: total of a yearly amount growing at g %
+function cumulCroissant(pct: number, years: number) {
+  const g = pct / 100
+  return g === 0 ? years : (Math.pow(1 + g, years) - 1) / g
+}
+
 function horizonEffectif(i: Inputs) {
   return Math.max(i.horizon, i.dureeSejour > 0 ? i.dureeSejour : 0)
 }
@@ -139,10 +146,8 @@ function simulate(i: Inputs): { points: YearPoint[]; breakeven: number | null } 
     (i.prix * i.entretienPct) / 100 +
     i.assuranceHabProprio
 
-  const buyerMonthlyNonMortgage = chargesAnnuellesProprio / 12
   const renterPortfolioInit = i.apport
   const r_invest = i.tauxEpargne / 100 / 12
-  const r_loyer_mensuel = i.tauxIRL / 100 / 12
 
   let capitalRestantDu = emprunt
   let renterPortfolio = renterPortfolioInit
@@ -151,7 +156,6 @@ function simulate(i: Inputs): { points: YearPoint[]; breakeven: number | null } 
   let buyerApports = 0
   const netDImpot = (valeur: number, apports: number) =>
     valeur - impot * Math.max(0, valeur - apports)
-  let currentLoyer = i.loyerMensuelCC
   const assuranceLocataireMensuelle = i.assuranceLocataire / 12
 
   const points: YearPoint[] = []
@@ -176,6 +180,11 @@ function simulate(i: Inputs): { points: YearPoint[]; breakeven: number | null } 
 
     if (breakeven === null && delta >= 0 && t > 0) breakeven = t
 
+    // Rent is revised once a year (lease anniversary); owner charges rise once a year too
+    const loyerAnnee = i.loyerMensuelCC * Math.pow(1 + i.tauxIRL / 100, t)
+    const chargesProprioAnnee =
+      (chargesAnnuellesProprio * Math.pow(1 + i.hausseCharges / 100, t)) / 12
+
     for (let m = 0; m < 12; m++) {
       if (capitalRestantDu > 0) {
         const interest = capitalRestantDu * tauxMensuel
@@ -186,8 +195,8 @@ function simulate(i: Inputs): { points: YearPoint[]; breakeven: number | null } 
       buyerSurplusPortfolio *= 1 + r_invest
 
       const buyerMonthly =
-        (capitalRestantDu > 0 ? mensualiteTotale : 0) + buyerMonthlyNonMortgage
-      const renterMonthly = currentLoyer + assuranceLocataireMensuelle
+        (capitalRestantDu > 0 ? mensualiteTotale : 0) + chargesProprioAnnee
+      const renterMonthly = loyerAnnee + assuranceLocataireMensuelle
       const surplus = buyerMonthly - renterMonthly
       if (surplus > 0) {
         renterPortfolio += surplus
@@ -196,8 +205,6 @@ function simulate(i: Inputs): { points: YearPoint[]; breakeven: number | null } 
         buyerSurplusPortfolio += -surplus
         buyerApports += -surplus
       }
-
-      currentLoyer *= 1 + r_loyer_mensuel
     }
   }
 
@@ -454,6 +461,7 @@ const defaults: Inputs = {
   assuranceLocataire: 150,
   tauxAppreciation: 2,
   tauxIRL: 2.5,
+  hausseCharges: 2,
   tauxEpargne: 5,
   fiscaliteEpargne: 30,
   horizon: 30,
@@ -505,7 +513,7 @@ export default function Page() {
       inputs.chargesCopro +
       (inputs.prix * inputs.entretienPct) / 100 +
       inputs.assuranceHabProprio) *
-      horizon
+      cumulCroissant(inputs.hausseCharges, horizon)
   const chargesProprioMensuel =
     (inputs.taxeFonciere +
       inputs.chargesCopro +
@@ -1076,6 +1084,16 @@ export default function Page() {
                         suffix="%/an"
                         step={0.1}
                         min={0}
+                        hint="Révisé une fois par an, à la date anniversaire du bail"
+                      />
+                      <NumericInput
+                        id="hausse-charges"
+                        label="Hausse des charges propriétaire"
+                        value={inputs.hausseCharges}
+                        onChange={setClamped("hausseCharges", 100)}
+                        suffix="%/an"
+                        step={0.1}
+                        hint="Taxe foncière, copropriété, entretien, assurance · valeur indicative"
                       />
                       <NumericInput
                         id="epargne"
