@@ -55,9 +55,11 @@ function CustomTooltip({
 export function PatrimoineChart({
   points,
   breakeven,
+  stayYear,
 }: {
   points: YearPoint[]
   breakeven: number | null
+  stayYear?: number
 }) {
   const reduced = useReducedMotion()
   return (
@@ -92,6 +94,19 @@ export function PatrimoineChart({
               position: "insideTopRight",
               fontSize: 12,
               fill: "#005DAD",
+            }}
+          />
+        )}
+        {stayYear !== undefined && stayYear !== breakeven && (
+          <ReferenceLine
+            x={stayYear}
+            stroke="#3A546A"
+            strokeWidth={1.5}
+            label={{
+              value: `Départ prévu an ${stayYear}`,
+              position: "insideTopLeft",
+              fontSize: 12,
+              fill: "#3A546A",
             }}
           />
         )}

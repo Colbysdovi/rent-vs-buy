@@ -33,8 +33,12 @@ const BudgetChart = dynamic(
 // Types
 // ——————————————————————————————————————————————————
 
+type TypeBien = "ancien" | "neuf"
+
 interface Inputs {
   // Bien
+  typeBien: TypeBien
+  fraisNotairePct: number
   prix: number
   surface: number
   fraisAgenceAchat: number
@@ -44,6 +48,7 @@ interface Inputs {
   tauxInteret: number
   dureePret: number
   assuranceEmprunteur: number
+  fraisGarantiePct: number
   // Charges proprio
   taxeFonciere: number
   chargesCopro: number
@@ -56,7 +61,9 @@ interface Inputs {
   tauxAppreciation: number
   tauxIRL: number
   tauxEpargne: number
+  fiscaliteEpargne: number
   horizon: number
+  dureeSejour: number
   // Profil financier
   revenusNets: number
   chargesFixes: number
@@ -77,22 +84,54 @@ interface YearPoint {
   delta: number
 }
 
-function simulate(i: Inputs): { points: YearPoint[]; breakeven: number | null } {
-  const fraisNotaire = i.prix * 0.078
-  const fraisAchat = fraisNotaire + i.fraisAgenceAchat + i.travaux
-  const apportBien = Math.max(0, i.apport - fraisAchat)
-  const emprunt = Math.max(0, i.prix - apportBien)
+export const NOTAIRE_DEFAUT: Record<TypeBien, number> = { ancien: 7.8, neuf: 2.5 }
 
-  const tauxMensuel = i.tauxInteret / 100 / 12
-  const nbMois = i.dureePret * 12
-  const mensualiteCapInt =
-    tauxMensuel > 0 && emprunt > 0
-      ? (emprunt * (tauxMensuel * Math.pow(1 + tauxMensuel, nbMois))) /
+function mensualiteHorsAssurance(emprunt: number, tauxMensuel: number, nbMois: number) {
+  if (emprunt <= 0 || nbMois <= 0) return 0
+  return tauxMensuel > 0
+    ? (emprunt * (tauxMensuel * Math.pow(1 + tauxMensuel, nbMois))) /
         (Math.pow(1 + tauxMensuel, nbMois) - 1)
-      : emprunt / nbMois
+    : emprunt / nbMois
+}
 
-  const assuranceMensuelle = i.assuranceEmprunteur / 12
-  const mensualiteTotale = mensualiteCapInt + assuranceMensuelle
+// Single source for purchase costs and the loan. Fees beyond the down payment are financed.
+function financement(i: Inputs) {
+  const fraisNotaire = (i.prix * i.fraisNotairePct) / 100
+  const fraisHorsGarantie = fraisNotaire + i.fraisAgenceAchat + i.travaux
+  // Guarantee is based on the loan before itself, avoiding a circular calculation
+  const empruntHorsGarantie = Math.max(0, i.prix + fraisHorsGarantie - i.apport)
+  const fraisGarantie = (empruntHorsGarantie * i.fraisGarantiePct) / 100
+  const fraisAchat = fraisHorsGarantie + fraisGarantie
+  const emprunt = Math.max(0, i.prix + fraisAchat - i.apport)
+  const tauxMensuel = i.tauxInteret / 100 / 12
+  const nbMois = Math.max(0, i.dureePret * 12)
+  const mensualite = mensualiteHorsAssurance(emprunt, tauxMensuel, nbMois)
+  const mensualiteTotale = mensualite + (emprunt > 0 ? i.assuranceEmprunteur / 12 : 0)
+  return {
+    fraisNotaire,
+    fraisGarantie,
+    fraisAchat,
+    emprunt,
+    tauxMensuel,
+    nbMois,
+    mensualite,
+    mensualiteTotale,
+    interetsTotaux: Math.max(0, mensualite * nbMois - emprunt),
+  }
+}
+
+function horizonEffectif(i: Inputs) {
+  return Math.max(i.horizon, i.dureeSejour > 0 ? i.dureeSejour : 0)
+}
+
+function simulate(i: Inputs): { points: YearPoint[]; breakeven: number | null } {
+  const f = financement(i)
+  const emprunt = f.emprunt
+  const tauxMensuel = f.tauxMensuel
+  const mensualiteCapInt = f.mensualite
+  const mensualiteTotale = f.mensualiteTotale
+  const horizon = horizonEffectif(i)
+  const impot = Math.min(100, Math.max(0, i.fiscaliteEpargne)) / 100
 
   const chargesAnnuellesProprio =
     i.taxeFonciere +
@@ -107,19 +146,23 @@ function simulate(i: Inputs): { points: YearPoint[]; breakeven: number | null } 
 
   let capitalRestantDu = emprunt
   let renterPortfolio = renterPortfolioInit
+  let renterApports = renterPortfolioInit
   let buyerSurplusPortfolio = 0
+  let buyerApports = 0
+  const netDImpot = (valeur: number, apports: number) =>
+    valeur - impot * Math.max(0, valeur - apports)
   let currentLoyer = i.loyerMensuelCC
   const assuranceLocataireMensuelle = i.assuranceLocataire / 12
 
   const points: YearPoint[] = []
   let breakeven: number | null = null
 
-  for (let t = 0; t <= i.horizon; t++) {
+  for (let t = 0; t <= horizon; t++) {
     const propertyValue = i.prix * Math.pow(1 + i.tauxAppreciation / 100, t)
     const fraisRevente = propertyValue * 0.05
     const buyerEquity = propertyValue - fraisRevente - capitalRestantDu
-    const buyerNetWorth = buyerEquity + buyerSurplusPortfolio
-    const renterNetWorth = renterPortfolio
+    const buyerNetWorth = buyerEquity + netDImpot(buyerSurplusPortfolio, buyerApports)
+    const renterNetWorth = netDImpot(renterPortfolio, renterApports)
     const delta = buyerNetWorth - renterNetWorth
 
     points.push({
@@ -146,8 +189,13 @@ function simulate(i: Inputs): { points: YearPoint[]; breakeven: number | null } 
         (capitalRestantDu > 0 ? mensualiteTotale : 0) + buyerMonthlyNonMortgage
       const renterMonthly = currentLoyer + assuranceLocataireMensuelle
       const surplus = buyerMonthly - renterMonthly
-      if (surplus > 0) renterPortfolio += surplus
-      else buyerSurplusPortfolio += -surplus
+      if (surplus > 0) {
+        renterPortfolio += surplus
+        renterApports += surplus
+      } else {
+        buyerSurplusPortfolio += -surplus
+        buyerApports += -surplus
+      }
 
       currentLoyer *= 1 + r_loyer_mensuel
     }
@@ -175,6 +223,7 @@ function getRecommendation({
   seuilResteAVivre,
   breakeven,
   horizon,
+  dureeSejour,
   revenusNets,
   mensualiteTotale,
   buyerMonthlyTotal,
@@ -187,6 +236,7 @@ function getRecommendation({
   seuilResteAVivre: number
   breakeven: number | null
   horizon: number
+  dureeSejour: number
   revenusNets: number
   mensualiteTotale: number
   buyerMonthlyTotal: number
@@ -215,26 +265,37 @@ function getRecommendation({
     }
   }
 
+  const ans = (n: number) => `${n} an${n > 1 ? "s" : ""}`
+
   if (breakeven === null || breakeven > horizon) {
     return {
       decision: "louer",
       titre: "À Louer",
-      explication: `La situation financière le permet (taux d'endettement ${pctEndetStr}, reste à vivre ${fmt(resteAVivreAchat)}/mois), mais sur ${horizon} ans l'achat ne rattrape pas un locataire qui investit la différence chaque mois. Revoyez l'apport, le loyer de référence ou allongez l'horizon de simulation.`,
+      explication: `La situation financière le permet (taux d'endettement ${pctEndetStr}, reste à vivre ${fmt(resteAVivreAchat)}/mois), mais l'achat ne rattrape jamais un locataire qui investit la différence sur les ${ans(horizon)} simulés. Revoyez l'apport, le prix ou le loyer de référence.`,
     }
   }
 
-  if (breakeven > 15) {
+  if (breakeven > dureeSejour) {
+    return {
+      decision: "louer",
+      titre: "À Louer",
+      explication: `Vous prévoyez d'y rester ${ans(dureeSejour)}, mais l'achat ne devient rentable qu'à partir de l'année ${breakeven}. En partant avant, les frais d'achat et de revente ne sont pas amortis : la location reste plus avantageuse pour votre projet.`,
+    }
+  }
+
+  const marge = dureeSejour - breakeven
+  if (marge < 3) {
     return {
       decision: "prudence",
       titre: "Prudence",
-      explication: `L'achat est financièrement faisable (taux d'endettement ${pctEndetStr}, reste à vivre ${fmt(resteAVivreAchat)}/mois ${foyer}), mais le point d'équilibre patrimonial n'est atteint qu'à l'année ${breakeven}. Si vous n'envisagez pas de rester ${breakeven} ans dans ce logement, la location est préférable.`,
+      explication: `L'achat est finançable (taux d'endettement ${pctEndetStr}, reste à vivre ${fmt(resteAVivreAchat)}/mois ${foyer}) et devient rentable à l'année ${breakeven}, mais vous prévoyez d'y rester ${ans(dureeSejour)} : la marge n'est que de ${ans(marge)}. Un départ anticipé rendrait la location plus avantageuse.`,
     }
   }
 
   return {
     decision: "acheter",
     titre: "À Acheter",
-    explication: `Profil favorable : taux d'endettement de ${pctEndetStr} (limite 35 %), reste à vivre de ${fmt(resteAVivreAchat)}/mois ${foyer} — au-dessus du seuil de ${fmt(seuilResteAVivre)}. Le point d'équilibre patrimonial est atteint à l'année ${breakeven} : à partir de là, chaque année supplémentaire creuse l'avantage de l'achat.`,
+    explication: `Profil favorable : taux d'endettement de ${pctEndetStr} (limite 35 %), reste à vivre de ${fmt(resteAVivreAchat)}/mois ${foyer}. L'achat devient rentable à l'année ${breakeven} et vous prévoyez d'y rester ${ans(dureeSejour)}, soit ${ans(marge)} de marge.`,
   }
 }
 
@@ -374,6 +435,8 @@ function MetricCard({
 // ——————————————————————————————————————————————————
 
 const defaults: Inputs = {
+  typeBien: "ancien",
+  fraisNotairePct: NOTAIRE_DEFAUT.ancien,
   prix: 300000,
   surface: 70,
   fraisAgenceAchat: 0,
@@ -382,6 +445,7 @@ const defaults: Inputs = {
   tauxInteret: 3.3,
   dureePret: 25,
   assuranceEmprunteur: 300,
+  fraisGarantiePct: 1,
   taxeFonciere: 1200,
   chargesCopro: 2400,
   entretienPct: 0.5,
@@ -391,7 +455,9 @@ const defaults: Inputs = {
   tauxAppreciation: 2,
   tauxIRL: 2.5,
   tauxEpargne: 5,
+  fiscaliteEpargne: 30,
   horizon: 30,
+  dureeSejour: 30,
   revenusNets: 0,
   chargesFixes: 800,
   autresCredits: 0,
@@ -408,25 +474,30 @@ export default function Page() {
   function set<K extends keyof Inputs>(key: K) {
     return (v: number) => setInputs((prev) => ({ ...prev, [key]: v }))
   }
+  function setClamped<K extends keyof Inputs>(key: K, max: number) {
+    return (v: number) => setInputs((prev) => ({ ...prev, [key]: Math.min(max, Math.max(0, v)) }))
+  }
+  function setTypeBien(t: TypeBien) {
+    setInputs((prev) => ({ ...prev, typeBien: t, fraisNotairePct: NOTAIRE_DEFAUT[t] }))
+  }
 
   const { points, breakeven } = useMemo(() => simulate(inputs), [inputs])
 
   // ── Derived metrics ──
-  const fraisNotaire = inputs.prix * 0.078
-  const fraisAchat = fraisNotaire + inputs.fraisAgenceAchat + inputs.travaux
-  const apportBien = Math.max(0, inputs.apport - fraisAchat)
-  const emprunt = Math.max(0, inputs.prix - apportBien)
-  const tauxMensuel = inputs.tauxInteret / 100 / 12
-  const nbMois = inputs.dureePret * 12
-  const mensualite =
-    tauxMensuel > 0 && emprunt > 0
-      ? (emprunt * (tauxMensuel * Math.pow(1 + tauxMensuel, nbMois))) /
-        (Math.pow(1 + tauxMensuel, nbMois) - 1)
-      : emprunt / nbMois
-  const mensualiteTotale = mensualite + inputs.assuranceEmprunteur / 12
-  const interetsTotaux = mensualite * nbMois - emprunt
+  const {
+    fraisNotaire,
+    fraisGarantie,
+    fraisAchat,
+    emprunt,
+    tauxMensuel,
+    nbMois,
+    mensualiteTotale,
+    interetsTotaux,
+  } = financement(inputs)
+  const horizon = horizonEffectif(inputs)
   const chargesNonRecuperablesTotales =
     fraisNotaire +
+    fraisGarantie +
     inputs.fraisAgenceAchat +
     interetsTotaux +
     inputs.assuranceEmprunteur * inputs.dureePret +
@@ -434,7 +505,7 @@ export default function Page() {
       inputs.chargesCopro +
       (inputs.prix * inputs.entretienPct) / 100 +
       inputs.assuranceHabProprio) *
-      inputs.horizon
+      horizon
   const chargesProprioMensuel =
     (inputs.taxeFonciere +
       inputs.chargesCopro +
@@ -465,7 +536,8 @@ export default function Page() {
         resteAVivreLocation,
         seuilResteAVivre,
         breakeven,
-        horizon: inputs.horizon,
+        horizon,
+        dureeSejour: inputs.dureeSejour > 0 ? inputs.dureeSejour : horizon,
         revenusNets: inputs.revenusNets,
         mensualiteTotale,
         buyerMonthlyTotal,
@@ -476,6 +548,35 @@ export default function Page() {
 
   const lastPoint = points[points.length - 1]
   const snap = (yr: number) => points.find((p) => p.year === yr)
+  const dureeSejour = inputs.dureeSejour > 0 ? inputs.dureeSejour : horizon
+  const stayPoint = snap(dureeSejour)
+
+  // ── Listing indicators ──
+  const loyerAnnuel = inputs.loyerMensuelCC * 12
+  const ratioPrixLoyer = loyerAnnuel > 0 ? inputs.prix / loyerAnnuel : null
+  const ratioBand =
+    ratioPrixLoyer === null
+      ? "Loyer de référence manquant"
+      : ratioPrixLoyer < 20
+        ? "Plutôt favorable à l'achat (< 20 ans)"
+        : ratioPrixLoyer <= 25
+          ? "Zone neutre (20–25 ans)"
+          : "Plutôt favorable à la location (> 25 ans)"
+
+  // Highest price whose payment + insurance + other credits reaches 35 % of income
+  const plafondMensuel =
+    0.35 * inputs.revenusNets - inputs.autresCredits - inputs.assuranceEmprunteur / 12
+  let prixMax: number | null = null
+  if (hasFinancialProfile && plafondMensuel > 0 && nbMois > 0) {
+    const empruntMax =
+      tauxMensuel > 0
+        ? (plafondMensuel * (1 - Math.pow(1 + tauxMensuel, -nbMois))) / tauxMensuel
+        : plafondMensuel * nbMois
+    const g = inputs.fraisGarantiePct / 100
+    const a = inputs.fraisNotairePct / 100
+    const p = (empruntMax / (1 + g) + inputs.apport - inputs.fraisAgenceAchat - inputs.travaux) / (1 + a)
+    prixMax = p > 0 ? Math.round(p) : null
+  }
 
   // ── Banner colors ──
   const bannerCls = recommendation
@@ -641,6 +742,30 @@ export default function Page() {
                           Écart : {fmt(resteAVivreLocation - resteAVivreAchat)}
                         </p>
                       </div>
+                      <div
+                        className={cn(
+                          "col-span-full flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-xl p-4",
+                          prixMax !== null && inputs.prix <= prixMax
+                            ? "bg-primary/5 border border-primary/20"
+                            : "bg-destructive/5 border border-destructive/20"
+                        )}
+                      >
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Prix maximum finançable (endettement 35 %)
+                          </p>
+                          <p className="mt-1 font-mono text-xl font-semibold text-foreground">
+                            {prixMax !== null ? fmt(prixMax) : "Aucun financement possible"}
+                          </p>
+                        </div>
+                        <p className="text-sm font-medium text-foreground">
+                          {prixMax === null
+                            ? "Vos charges de crédit dépassent déjà la limite"
+                            : inputs.prix <= prixMax
+                              ? `Ce bien est dans votre budget (marge ${fmt(prixMax - inputs.prix)})`
+                              : `Ce bien dépasse votre budget de ${fmt(inputs.prix - prixMax)}`}
+                        </p>
+                      </div>
                     </CascadeItem>
                   )}
                   </Disclosure>
@@ -712,6 +837,31 @@ export default function Page() {
 
                 <TabsContent value="bien">
                     <CardContent className="grid gap-4 pt-5 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <p id="type-bien-label" className="text-base font-medium">
+                          Type de bien
+                        </p>
+                        <Tabs value={inputs.typeBien} onValueChange={(v) => setTypeBien(v as TypeBien)}>
+                          <TabsList className="w-full" aria-labelledby="type-bien-label">
+                            <TabsTrigger value="ancien" className="flex-1 text-sm">
+                              Ancien
+                            </TabsTrigger>
+                            <TabsTrigger value="neuf" className="flex-1 text-sm">
+                              Neuf
+                            </TabsTrigger>
+                          </TabsList>
+                        </Tabs>
+                      </div>
+                      <NumericInput
+                        id="notaire"
+                        label="Frais de notaire"
+                        value={inputs.fraisNotairePct}
+                        onChange={setClamped("fraisNotairePct", 100)}
+                        suffix="% du prix"
+                        step={0.1}
+                        badge="non récupérable"
+                        hint={`= ${fmt(fraisNotaire)} · ${inputs.typeBien === "neuf" ? "neuf : droits de mutation réduits (≈ 2–3 % au total)" : "ancien : droits de mutation pleins (≈ 7–8 %)"} · valeur indicative`}
+                      />
                       <NumericInput
                         id="prix"
                         label="Prix d'achat"
@@ -757,7 +907,7 @@ export default function Page() {
                       <div className="space-y-2 rounded-xl bg-muted/50 p-4">
                         <div>
                           <p className="text-sm text-muted-foreground">
-                            Frais de notaire (7,8 %)
+                            Frais de notaire ({fmt(inputs.fraisNotairePct, { suffix: " %", decimals: 1 })})
                             <span className="ml-1.5 text-xs text-muted-foreground/70">non récupérables</span>
                           </p>
                           <p className="font-mono text-base font-medium">{fmt(fraisNotaire)}</p>
@@ -800,6 +950,16 @@ export default function Page() {
                         step={50}
                         min={0}
                         badge="non récupérable"
+                      />
+                      <NumericInput
+                        id="garantie"
+                        label="Frais de garantie et de dossier"
+                        value={inputs.fraisGarantiePct}
+                        onChange={setClamped("fraisGarantiePct", 100)}
+                        suffix="% du prêt"
+                        step={0.1}
+                        badge="non récupérable"
+                        hint={`= ${fmt(fraisGarantie)} · caution ou hypothèque + frais bancaires · valeur indicative`}
                       />
                       <div className="rounded-xl bg-muted/50 p-4">
                         <p className="text-sm text-muted-foreground">
@@ -928,13 +1088,32 @@ export default function Page() {
                         hint="PEA diversifié ≈ 5–7 %/an historique"
                       />
                       <NumericInput
+                        id="fiscalite"
+                        label="Fiscalité sur les gains de l'épargne"
+                        value={inputs.fiscaliteEpargne}
+                        onChange={setClamped("fiscaliteEpargne", 100)}
+                        suffix="%"
+                        step={1}
+                        hint="Flat tax 30 % · PEA après 5 ans ≈ 17,2 % · valeur indicative"
+                      />
+                      <NumericInput
                         id="horizon"
                         label="Horizon de simulation"
                         value={inputs.horizon}
-                        onChange={set("horizon")}
+                        onChange={setClamped("horizon", 60)}
                         suffix="ans"
                         step={1}
                         min={5}
+                        hint={horizon > inputs.horizon ? `Étendu à ${horizon} ans pour couvrir la durée prévue` : undefined}
+                      />
+                      <NumericInput
+                        id="sejour"
+                        label="Durée prévue dans le logement"
+                        value={inputs.dureeSejour}
+                        onChange={setClamped("dureeSejour", 60)}
+                        suffix="ans"
+                        step={1}
+                        hint="Combien d'années pensez-vous y vivre ? Vide = horizon"
                       />
                     </CardContent>
                 </TabsContent>
@@ -970,7 +1149,7 @@ export default function Page() {
                         <span className="ml-1.5 text-xs text-muted-foreground/70">non récupérables</span>
                       </span>
                     }
-                    value={`≈ ${fmt(interetsTotaux / nbMois, { decimals: 0 })}/mois`}
+                    value={`≈ ${fmt(nbMois > 0 ? interetsTotaux / nbMois : 0, { decimals: 0 })}/mois`}
                     muted
                   />
                   <StatRow label="Charges proprio" value={fmt(chargesProprioMensuel, { decimals: 0 })} muted />
@@ -980,7 +1159,7 @@ export default function Page() {
                   <Separator className="my-3" />
 
                   <p className="mb-1 text-sm font-medium text-muted-foreground">
-                    Coûts non récupérables sur {inputs.horizon} ans
+                    Coûts non récupérables sur {horizon} ans
                   </p>
                   <StatRow
                     label={
@@ -1010,14 +1189,30 @@ export default function Page() {
                     </>
                   ) : (
                     <p className="py-1 text-base text-destructive">
-                      Aucun équilibre sur {inputs.horizon} ans
+                      Aucun équilibre sur {horizon} ans
                     </p>
                   )}
 
                   <Separator className="my-3" />
 
+                  {stayPoint && dureeSejour !== horizon && (
+                    <>
+                      <p className="mb-1 text-sm font-medium text-muted-foreground">
+                        Si vous partez après {dureeSejour} ans
+                      </p>
+                      <StatRow label="Patrimoine acheteur" value={fmtK(stayPoint.acheteur)} />
+                      <StatRow label="Patrimoine locataire" value={fmtK(stayPoint.locataire)} />
+                      <StatRow
+                        label="Avantage achat"
+                        value={(stayPoint.delta >= 0 ? "+" : "") + fmtK(stayPoint.delta)}
+                        highlight
+                      />
+                      <Separator className="my-3" />
+                    </>
+                  )}
+
                   <p className="mb-1 text-sm font-medium text-muted-foreground">
-                    À {inputs.horizon} ans
+                    À {horizon} ans
                   </p>
                   {lastPoint && (
                     <>
@@ -1044,16 +1239,17 @@ export default function Page() {
                   Hypothèses
                 </Badge>
                 <p className="text-sm text-muted-foreground">
-                  Frais de revente 5 %. Pas de plus-value sur résidence principale. Le locataire
-                  investit l&apos;apport + l&apos;écart mensuel. Simulation avant impôt sur
-                  revenus du capital.
+                  Frais de revente 5 %. Plus-value de la résidence principale exonérée. Le
+                  locataire investit l&apos;apport + l&apos;écart mensuel ; ses gains sont imposés à{" "}
+                  {fmt(inputs.fiscaliteEpargne, { suffix: " %", decimals: 0 })}{" "}à la revente
+                  (même règle pour l&apos;épargne de l&apos;acheteur).
                 </p>
               </div>
             </div>
           </div>
 
           {/* ── Key metrics ── */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <MetricCard
               label="Mensualité totale achat"
               value={fmt(mensualiteTotale, { decimals: 0 })}
@@ -1071,7 +1267,7 @@ export default function Page() {
             />
             <MetricCard
               label={breakeven !== null ? "Point d'équilibre" : "Pas d'équilibre"}
-              value={breakeven !== null ? `Année ${breakeven}` : `> ${inputs.horizon} ans`}
+              value={breakeven !== null ? `Année ${breakeven}` : `> ${horizon} ans`}
               sub={
                 breakeven !== null
                   ? surplusMensuel > 0
@@ -1080,6 +1276,11 @@ export default function Page() {
                   : "Revoyez l'apport ou le loyer"
               }
               accent={breakeven !== null}
+            />
+            <MetricCard
+              label="Ratio prix / loyer"
+              value={ratioPrixLoyer === null ? "—" : fmt(ratioPrixLoyer, { suffix: " ans", decimals: 1 })}
+              sub={ratioBand}
             />
           </div>
 
@@ -1101,7 +1302,7 @@ export default function Page() {
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              <PatrimoineChart points={points} breakeven={breakeven} />
+              <PatrimoineChart points={points} breakeven={breakeven} stayYear={dureeSejour} />
             </CardContent>
           </Card>
 
@@ -1123,7 +1324,7 @@ export default function Page() {
                   </thead>
                   <tbody className="font-mono tabular-nums">
                     {[3, 5, 7, 10, 15, 20, 25, 30]
-                      .filter((y) => y <= inputs.horizon)
+                      .filter((y) => y <= horizon)
                       .map((y) => {
                         const s = snap(y)
                         if (!s) return null

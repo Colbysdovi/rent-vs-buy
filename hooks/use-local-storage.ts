@@ -12,7 +12,12 @@ export function useLocalStorage<T>(
   useEffect(() => {
     try {
       const stored = localStorage.getItem(key)
-      if (stored !== null) setValue(JSON.parse(stored))
+      if (stored !== null) {
+        const parsed = JSON.parse(stored)
+        // Older saves lack newer fields: fill them from defaults, keep every saved value
+        const isPlainObject = (v: unknown) => typeof v === "object" && v !== null && !Array.isArray(v)
+        setValue(isPlainObject(defaultValue) && isPlainObject(parsed) ? { ...defaultValue, ...parsed } : parsed)
+      }
     } catch {}
     setHydrated(true)
   }, [key])
