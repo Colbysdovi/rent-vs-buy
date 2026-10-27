@@ -24,6 +24,11 @@ const PatrimoineChart = dynamic(
   }
 )
 
+const DepensesChart = dynamic(
+  () => import("@/components/depenses-chart").then((m) => m.DepensesChart),
+  { ssr: false, loading: () => <div className="h-[360px]" /> }
+)
+
 const BudgetChart = dynamic(
   () => import("@/components/budget-chart").then((m) => m.BudgetChart),
   { ssr: false, loading: () => <div className="h-[140px]" /> }
@@ -83,6 +88,8 @@ interface YearPoint {
   propertyValue: number
   capitalRestantDu: number
   delta: number
+  depenseAchat: number
+  depenseLocation: number
 }
 
 export const NOTAIRE_DEFAUT: Record<TypeBien, number> = { ancien: 7.8, neuf: 2.5 }
@@ -176,6 +183,8 @@ function simulate(i: Inputs): { points: YearPoint[]; breakeven: number | null } 
       propertyValue: Math.round(propertyValue),
       capitalRestantDu: Math.round(capitalRestantDu),
       delta: Math.round(delta),
+      depenseAchat: 0,
+      depenseLocation: 0,
     })
 
     if (breakeven === null && delta >= 0 && t > 0) breakeven = t
@@ -185,6 +194,8 @@ function simulate(i: Inputs): { points: YearPoint[]; breakeven: number | null } 
     const chargesProprioAnnee =
       (chargesAnnuellesProprio * Math.pow(1 + i.hausseCharges / 100, t)) / 12
 
+    let totalAchat = 0
+    let totalLocation = 0
     for (let m = 0; m < 12; m++) {
       if (capitalRestantDu > 0) {
         const interest = capitalRestantDu * tauxMensuel
@@ -197,6 +208,8 @@ function simulate(i: Inputs): { points: YearPoint[]; breakeven: number | null } 
       const buyerMonthly =
         (capitalRestantDu > 0 ? mensualiteTotale : 0) + chargesProprioAnnee
       const renterMonthly = loyerAnnee + assuranceLocataireMensuelle
+      totalAchat += buyerMonthly
+      totalLocation += renterMonthly
       const surplus = buyerMonthly - renterMonthly
       if (surplus > 0) {
         renterPortfolio += surplus
@@ -206,6 +219,9 @@ function simulate(i: Inputs): { points: YearPoint[]; breakeven: number | null } 
         buyerApports += -surplus
       }
     }
+    // Average monthly spending during year t (owner: loan + charges; renter: rent + insurance)
+    points[points.length - 1].depenseAchat = Math.round(totalAchat / 12)
+    points[points.length - 1].depenseLocation = Math.round(totalLocation / 12)
   }
 
   return { points, breakeven }
@@ -1302,27 +1318,51 @@ export default function Page() {
             />
           </div>
 
-          {/* ── Chart ── */}
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Patrimoine net comparé</CardTitle>
+          {/* ── Charts ── */}
+          <Tabs defaultValue="patrimoine">
+            <TabsPanels>
+              <div className="flex flex-wrap items-center justify-between gap-3 px-(--card-spacing) pb-2">
+                <TabsList aria-label="Graphique affiché">
+                  <TabsTrigger value="patrimoine" className="text-sm">
+                    Patrimoine net
+                  </TabsTrigger>
+                  <TabsTrigger value="depenses" className="text-sm">
+                    Dépenses mensuelles
+                  </TabsTrigger>
+                </TabsList>
                 <div className="flex items-center gap-5 text-sm text-muted-foreground">
                   <span className="flex items-center gap-2">
-                    <span className="inline-block h-3 w-3 rounded-full bg-foreground" />
+                    <span className="inline-block h-3 w-3 rounded-full bg-[#006DFF]" />
                     Acheteur
                   </span>
                   <span className="flex items-center gap-2">
-                    <span className="inline-block h-3 w-3 rounded-full bg-muted-foreground" />
+                    <span className="inline-block h-3 w-3 rounded-full bg-[#C4CACE]" />
                     Locataire
                   </span>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <PatrimoineChart points={points} breakeven={breakeven} stayYear={dureeSejour} />
-            </CardContent>
-          </Card>
+              <TabsContent value="patrimoine" className="px-(--card-spacing)">
+                <p className="text-sm text-muted-foreground">
+                  Ce que chacun possède s&apos;il revend ou liquide son épargne cette année-là.
+                </p>
+                <PatrimoineChart
+                  points={points}
+                  breakeven={breakeven}
+                  stayYear={dureeSejour < horizon ? dureeSejour : undefined}
+                />
+              </TabsContent>
+              <TabsContent value="depenses" className="px-(--card-spacing)">
+                <p className="text-sm text-muted-foreground">
+                  Coût moyen par mois : crédit + charges pour l&apos;acheteur, loyer + assurance pour le
+                  locataire.
+                </p>
+                <DepensesChart
+                  points={points}
+                  finCredit={emprunt > 0 && inputs.dureePret <= horizon ? inputs.dureePret : null}
+                />
+              </TabsContent>
+            </TabsPanels>
+          </Tabs>
 
           {/* ── Snapshot table ── */}
           <Card>

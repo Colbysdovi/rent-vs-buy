@@ -64,7 +64,7 @@ export function PatrimoineChart({
   const reduced = useReducedMotion()
   return (
     <ResponsiveContainer width="100%" height={360}>
-      <LineChart data={points} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+      <LineChart data={points} margin={{ top: 8, right: 24, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.922 0 0)" vertical={false} />
         <XAxis
           dataKey="year"
