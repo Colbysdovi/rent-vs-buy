@@ -39,6 +39,7 @@ interface Inputs {
   dureéDetention: number
   valorisationMarche: number
   IRL: number
+  hausseCharges: number
   // Profil financier
   revenusNets: number
   chargesFixes: number
@@ -109,7 +110,18 @@ function compute(i: Inputs) {
   const valeurRevente =
     i.prixAcquisition * Math.pow(1 + i.valorisationMarche / 100, i.dureéDetention)
   const gainNetRevente = valeurRevente - i.prixAcquisition - capitalRestantDu
-  const revenusNetsExploitation = (loyersApresVacance - totalCharges) * i.dureéDetention
+  // Rent revised yearly at IRL (management fees follow the rent), other charges rise yearly
+  const chargesHorsGestion = totalCharges - honorairesGestion
+  let revenusNetsExploitation = 0
+  let loyerDerniereAnnee = loyersApresVacance
+  for (let t = 0; t < i.dureéDetention; t++) {
+    const indexLoyer = Math.pow(1 + i.IRL / 100, t)
+    const loyersAnnee = loyersApresVacance * indexLoyer
+    const chargesAnnee =
+      honorairesGestion * indexLoyer + chargesHorsGestion * Math.pow(1 + i.hausseCharges / 100, t)
+    revenusNetsExploitation += loyersAnnee - chargesAnnee
+    loyerDerniereAnnee = loyersAnnee
+  }
   const capitalRembourse = emprunt - capitalRestantDu
   const epargneeNette = capitalRembourse + gainNetRevente
 
@@ -131,6 +143,7 @@ function compute(i: Inputs) {
     valeurRevente,
     gainNetRevente,
     revenusNetsExploitation,
+    loyerDerniereAnnee,
     epargneeNette,
     capitalRestantDu,
   }
@@ -372,6 +385,7 @@ const defaults: Inputs = {
   dureéDetention: 20,
   valorisationMarche: 2,
   IRL: 3,
+  hausseCharges: 2,
   revenusNets: 0,
   chargesFixes: 800,
   autresCredits: 0,
@@ -940,6 +954,17 @@ export default function Page() {
                         suffix="%/an"
                         step={0.1}
                         min={0}
+                        hint={`Loyer révisé chaque année · ${fmt(r.loyerDerniereAnnee / 12, { decimals: 0 })}/mois net la dernière année`}
+                      />
+                      <NumericInput
+                        id="hausse-charges"
+                        label="Hausse annuelle des charges"
+                        value={inputs.hausseCharges}
+                        onChange={set("hausseCharges")}
+                        suffix="%/an"
+                        step={0.1}
+                        min={0}
+                        hint="Copropriété, taxe foncière, assurance, entretien… · valeur indicative"
                       />
                       <div className="space-y-3 rounded-xl bg-muted/50 p-4">
                         <div>
@@ -1036,7 +1061,7 @@ export default function Page() {
                     highlight
                   />
                   <StatRow
-                    label="Revenus nets exploitation"
+                    label={`Revenus nets exploitation (${inputs.dureéDetention} ans)`}
                     value={fmt(r.revenusNetsExploitation, { decimals: 0 })}
                     highlight
                   />
