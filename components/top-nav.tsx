@@ -38,7 +38,7 @@ export function TopNav() {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  "flex h-11 items-center gap-2 rounded-xl px-4 text-sm font-medium transition-colors",
                   active
                     ? "bg-primary/10 text-primary ring-1 ring-primary/15"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
