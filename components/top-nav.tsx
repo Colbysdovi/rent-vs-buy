@@ -11,7 +11,7 @@ const MotionLink = motion.create(Link)
 
 const items: { label: string; short: string; href: string; icon: LucideIcon }[] = [
   { label: "Résidence Principale", short: "Résidence", href: "/residence-principale", icon: Home },
-  { label: "Rendement Locatif", short: "Locatif", href: "/", icon: TrendingUp },
+  { label: "Rendement Locatif", short: "Locatif", href: "/rendement-locatif", icon: TrendingUp },
 ]
 
 export function TopNav() {
@@ -25,7 +25,7 @@ export function TopNav() {
         className="pointer-events-none absolute inset-x-0 top-0 -bottom-6 -z-10 bg-gradient-to-b from-background from-60% to-transparent"
       />
       <div className="mx-auto flex h-16 max-w-5xl items-center gap-2 rounded-2xl border border-border bg-background/80 px-3 shadow-lg shadow-foreground/5 backdrop-blur-xl">
-        <Link href="/" className="mr-2 flex shrink-0 items-center gap-2.5 sm:mr-4">
+        <Link href="/residence-principale" className="mr-2 flex shrink-0 items-center gap-2.5 sm:mr-4">
           <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Calculator className="size-[18px]" />
           </span>
