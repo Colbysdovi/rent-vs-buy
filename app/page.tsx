@@ -383,7 +383,7 @@ const defaults: Inputs = {
 // ——————————————————————————————————————————————————
 
 export default function Page() {
-  const [inputs, setInputs] = useLocalStorage<Inputs>("sim-locatif-v2", defaults)
+  const [inputs, setInputs, hydrated] = useLocalStorage<Inputs>("sim-locatif-v2", defaults)
 
   function set<K extends keyof Inputs>(key: K) {
     return (v: number) => setInputs((prev) => ({ ...prev, [key]: v }))
@@ -431,6 +431,9 @@ export default function Page() {
         ? "bg-destructive/10 text-destructive"
         : "bg-[#F4CB00]/30 text-[#DC5D00]"
     : ""
+
+  // Render once saved values are in, so nothing animates from defaults to saved state
+  if (!hydrated) return <main className="min-h-screen bg-background" />
 
   return (
     <>

@@ -5,14 +5,16 @@ import { useState, useEffect, useCallback } from "react"
 export function useLocalStorage<T>(
   key: string,
   defaultValue: T
-): [T, (v: T | ((prev: T) => T)) => void] {
+): [T, (v: T | ((prev: T) => T)) => void, boolean] {
   const [value, setValue] = useState<T>(defaultValue)
+  const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
     try {
       const stored = localStorage.getItem(key)
       if (stored !== null) setValue(JSON.parse(stored))
     } catch {}
+    setHydrated(true)
   }, [key])
 
   const set = useCallback(
@@ -28,5 +30,5 @@ export function useLocalStorage<T>(
     [key]
   )
 
-  return [value, set]
+  return [value, set, hydrated]
 }
