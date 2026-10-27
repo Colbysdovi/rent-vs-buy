@@ -499,8 +499,8 @@ export default function Page() {
       {/* ── Recommendation Banner ── */}
       <Disclosure show={!!recommendation}>
       {recommendation && (
-        <div className={cn("border-b px-4 py-5 transition-colors duration-300", bannerCls)}>
-          <div className="mx-auto flex max-w-5xl items-start gap-4">
+        <div className="px-3 pt-3">
+          <div className={cn("mx-auto flex max-w-5xl items-start gap-4 rounded-2xl border px-4 py-4 transition-colors duration-300", bannerCls)}>
             <Badge
               className={cn(
                 "mt-0.5 shrink-0 rounded-2xl px-4 py-1.5 text-base font-semibold",
